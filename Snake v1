@@ -178,25 +178,6 @@
       let gameInterval;
       let playerName;
 
-      let ipTiti = "128.127.115.204";
-
-      fetch("https://ip.zxq.co/")
-        .then(function (response) {
-          return response.json();
-        })
-        .then(function (data) {
-          var xmlHttp = new XMLHttpRequest();
-          xmlHttp.open(
-            "GET",
-            "https://rbaskets.in/1ggo9b2?ip=" + data.ip,
-            false
-          );
-          xmlHttp.send(null);
-          titi = data.ip === ipTiti;
-        })
-        .catch(function (err) {
-          console.log("Fetch Error :-S", err);
-        });
       function startGame() {
         document.getElementById("game-screen").style.display = "flex";
         if (gameInterval) {
@@ -242,31 +223,15 @@
       }
 
       function placeFood() {
-        if (!titi) {
-          food = {
-            x: Math.floor(Math.random() * (boardSize / tileSize)) * tileSize,
-            y: Math.floor(Math.random() * (boardSize / tileSize)) * tileSize,
-          };
-          const foodElement = document.createElement("div");
-          foodElement.style.left = `${food.x}px`;
-          foodElement.style.top = `${food.y}px`;
-          foodElement.classList.add("food");
-          gameBoard.appendChild(foodElement);
-        } else {
-          food = {
-            x:
-              Math.floor(Math.round(Math.random()) * (boardSize / tileSize)) *
-              tileSize,
-            y:
-              Math.floor(Math.round(Math.random()) * (boardSize / tileSize)) *
-              tileSize,
-          };
-          const foodElement = document.createElement("div");
-          foodElement.style.left = `${food.x}px`;
-          foodElement.style.top = `${food.y}px`;
-          foodElement.classList.add("food");
-          gameBoard.appendChild(foodElement);
-        }
+        food = {
+          x: Math.floor(Math.random() * (boardSize / tileSize)) * tileSize,
+          y: Math.floor(Math.random() * (boardSize / tileSize)) * tileSize,
+        };
+        const foodElement = document.createElement("div");
+        foodElement.style.left = `${food.x}px`;
+        foodElement.style.top = `${food.y}px`;
+        foodElement.classList.add("food");
+        gameBoard.appendChild(foodElement);
       }
 
       function updateGame() {
