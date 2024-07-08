@@ -105,9 +105,12 @@
       #back-button {
         display: none;
       }
+      #save-score-button {
+        display: none;
+      }
       #nameInput {
         display: none;
-        margin-top: 20px;
+        margin-top: 32px;
         border: solid black 2px;
         padding: 16px 16px;
         text-align: center;
@@ -125,6 +128,15 @@
         font-family: "BasicCommercial LT Roman";
         font-size: 24px;
       }
+      .snake-head {
+        background-color: #8acf8a;
+      }
+      .button-container {
+        display: flex;
+      }
+      .button-container button {
+        margin: 24px 16px;
+      }
     </style>
   </head>
   <body>
@@ -134,21 +146,29 @@
         <p id="pause-message">GAME PAUSED</p>
         <div id="game-board"></div>
         <p id="end-message">GAME OVER!</p>
+        <button onclick="startGame(currentDifficulty)" id="play-again-button">
+          Play Again
+        </button>
         <input type="text" id="nameInput" placeholder="Enter your name" />
-        <button onclick="backToMain()" id="back-button">Main Menu</button>
+        <div class="button-container">
+          <button onclick="backToMain()" id="back-button">Main Menu</button>
+          <button onclick="saveToLeaderboard()" id="save-score-button">
+            Save Score
+          </button>
+        </div>
       </div>
       <div id="controls-page"></div>
       <div id="main-menu">
         <p>Snake</p>
-        <button onclick="startGame()" id="start-button">Start Game</button>
+
         <div class="button-container">
-          <button onclick="showControls()" id="controls-button">
-            Show Controls
-          </button>
-          <button onclick="showLeaderboard()" id="leaderboard-button">
-            Show Leaderboard
-          </button>
+          <button onclick="startGame(1)" id="start-button">Easy</button>
+          <button onclick="startGame(2)" id="start-button">Normal</button>
+          <button onclick="startGame(3)" id="start-button">Bosnian</button>
         </div>
+        <button onclick="showLeaderboard()" id="leaderboard-button">
+          Show Leaderboard
+        </button>
       </div>
       <div id="leaderboardScreen">
         <h1>Leaderboard</h1>
@@ -158,41 +178,110 @@
     </div>
 
     <script>
-      let titi = 0;
+      //Pentru play again button
+      let currentDifficulty = 2;
 
       let boardSize = 400;
+
+      //Contorul scorului
       let gameScore = 0;
+
+      //Marimea segmentelor pe care le parcurge sarpele. Practic, vom avea o tabla de 20x20.
       const tileSize = 20;
+
       const gameBoard = document.getElementById("game-board");
       const startButton = document.getElementById("start-button");
-      let interval_initial = 150;
+
+      //Intervalul la care se actualizeaza jocul, practic, viteza sarpelui
+      let interval_initial = 15;
+
+      //Pentru accelerarea vitezei mai tarziu
       let currentInterval = interval_initial;
+
+      //Pentru pauza
       let gamePaused = false;
       let pauseMessage = document.getElementById("pause-message");
 
+      //Pozitionam sarpele initial pe mijlocul tablei de joc.
       let snake = [{ x: 200, y: 200 }];
+
+      //Initial, sarpele nu are directie
       let direction = { x: 0, y: 0 };
       let nextDirection = { x: 0, y: 0 };
+
+      //Pentru a evita cazurile in care sarpele merge intr-o directie si incearca sa schimbe directia in sens opus si sa se termine jocul.
       let lastValidDirection = { x: 0, y: 0 };
       let food = { x: 0, y: 0 };
       let gameInterval;
       let playerName;
 
-      function startGame() {
+      //Intervalul la care marim tabla de joc in functie de dificultate
+      let adjustmentInterval;
+
+      //Intervalul la care marim viteza in functie de dificultate
+      let speedInterval;
+
+      //Viteza maxima pe care o poate lua sarpele in functie de dificultate
+      let maxSpeed;
+
+      //Pentru a elimina input lag fara a creste viteza jocului
+      let updateInterval = 0;
+
+      function startGame(difficulty) {
+        //Apare tabla de joc
         document.getElementById("game-screen").style.display = "flex";
         if (gameInterval) {
           clearInterval(gameInterval);
         }
+
+        //Tinem minte ultima dificultate pentru a putea incepe un nou joc rapid.
+        currentDifficulty = difficulty;
+
+        //Dispar elementele de pe meniul principal si ascundem elementele ce apar la finalul jocului
         document.getElementById("main-menu").style.display = "none";
         document.getElementById("back-button").style.display = "none";
+        document.getElementById("play-again-button").style.display = "none";
+        document.getElementById("save-score-button").style.display = "none";
         document.getElementById("end-message").style.display = "none";
         document.getElementById("nameInput").style.display = "none";
+
+        //Incepem din pozitia initiala
         resetGame();
         placeFood();
         gamePaused = false;
         pauseMessage.style.display = "none";
-        gameInterval = setInterval(updateGame, currentInterval);
+
+        //Setam parametrii de mai sus in functie de dificultate
+        if (difficulty === 1) {
+          gameSpeed = 40;
+          adjustmentInterval = 5;
+          speedInterval = 5;
+          maxSpeed = 20;
+          boardGrowth = 60;
+          maxSize = 760;
+        }
+        if (difficulty === 2) {
+          gameSpeed = 30;
+          adjustmentInterval = 10;
+          speedInterval = 3;
+          maxSpeed = 15;
+          boardGrowth = 40;
+          maxSize = 720;
+        }
+        if (difficulty === 3) {
+          gameSpeed = 20;
+          adjustmentInterval = 100;
+          speedInterval = 2;
+          maxSpeed = 5;
+          boardGrowth = 0;
+          maxSize = 400;
+        }
+
+        //Setam viteza si sarpele incepe sa se miste
+        gameInterval = setInterval(updateGame, 5);
       }
+
+      //Resetam totul la starea initiala.
 
       function resetGame() {
         gameScore = 0;
@@ -213,36 +302,67 @@
       }
 
       function createSnake() {
-        snake.forEach((segment) => {
+        //Trecem prin fiecare segment al sarpelui (fiecare patrat)
+        snake.forEach((segment, index) => {
+          //Creeam un element vizual pe tabla de joc
           const snakeElement = document.createElement("div");
+
+          //Il pozitionam in functie de coordonatele sale
           snakeElement.style.left = `${segment.x}px`;
           snakeElement.style.top = `${segment.y}px`;
+
+          //Adaugam clasa snake ca sa arate la fel cu restul sarpelui
           snakeElement.classList.add("snake");
+
+          //Capul sarpelui va arata diferit
+          if (index === 0) {
+            snakeElement.classList.add("snake-head");
+          }
+
+          //Adaugam sarpele pe tabla de joc
           gameBoard.appendChild(snakeElement);
         });
       }
 
       function placeFood() {
+        //Punem un element mancare pe tabla de joc
         food = {
           x: Math.floor(Math.random() * (boardSize / tileSize)) * tileSize,
           y: Math.floor(Math.random() * (boardSize / tileSize)) * tileSize,
         };
+
+        //Il adaugam vizual si il plasam in functie de coordonatele de mai sus
         const foodElement = document.createElement("div");
         foodElement.style.left = `${food.x}px`;
         foodElement.style.top = `${food.y}px`;
+
+        //Adaugam clasa food ca sa putem customiza estetica
         foodElement.classList.add("food");
+
+        //Adaugam mancarea pe tabla de joc
         gameBoard.appendChild(foodElement);
       }
 
       function updateGame() {
-        direction = nextDirection;
-        moveSnake();
-        checkCollision();
-        draw();
-        lastValidDirection = direction;
+        if (updateInterval % gameSpeed === 0) {
+          //Sarpele avanseaza cu 1 tile in urmatoarea directie
+          direction = nextDirection;
+          moveSnake();
+
+          //Verifica daca s-a lovit de vreun obstacol
+          checkCollision();
+
+          //Actualizeaza vizual pozitia sarpelui
+          draw();
+
+          //Tinem minte directia in care ne miscam
+          lastValidDirection = direction;
+        }
+        updateInterval++;
       }
 
       function moveSnake() {
+        //Mutam capul in directia curenta
         const head = {
           x: snake[0].x + direction.x,
           y: snake[0].y + direction.y,
@@ -262,17 +382,14 @@
       }
 
       function adjustSpeed() {
-        if (snake.length % 3 === 0) {
-          clearInterval(gameInterval);
-          currentInterval = Math.max(50, currentInterval - 5);
-          gameInterval = setInterval(updateGame, currentInterval);
-        }
+        if (snake.length % speedInterval === 0) gameSpeed--;
+        gameSpeed = Math.max(maxSpeed, gameSpeed);
       }
 
       function adjustBoard() {
-        if (gameScore % 10 === 0) {
-          boardSize += 40;
-          boardsize = Math.min(720, boardSize);
+        if (gameScore % adjustmentInterval === 0) {
+          boardSize += boardGrowth; 
+          boardSize = Math.min(maxSize, boardSize);
           gameBoard.style.width = `${boardSize}px`;
           gameBoard.style.height = `${boardSize}px`;
         }
@@ -290,7 +407,9 @@
             .some((segment) => segment.x === head.x && segment.y === head.y)
         ) {
           clearInterval(gameInterval);
-          document.getElementById("back-button").style.display = "block";
+          document.getElementById("back-button").style.display = "flex";
+          document.getElementById("play-again-button").style.display = "block";
+          document.getElementById("save-score-button").style.display = "flex";
           document.getElementById("end-message").style.display = "block";
           document.getElementById("nameInput").style.display = "block";
         }
@@ -361,22 +480,37 @@
 
       function updateLeaderboard(name, score) {
         const leaderboard = document.getElementById("leaderboardList");
-        const newItem = document.createElement("li");
-        newItem.innerText = `${name} - ${score}`;
-        newItem.classList.add("leaderboard-item");
-        leaderboard.appendChild(newItem);
+        const newItem = { name: name, score: score };
+        let leaderboardItems = Array.from(leaderboard.children).map((item) => {
+          const [name, score] = item.innerText.split(" - ");
+          return { name: name, score: parseInt(score) };
+        });
+
+        leaderboardItems.push(newItem);
+        leaderboardItems.sort((a, b) => b.score - a.score);
+        leaderboardItems = leaderboardItems.slice(0, 10); // Keep only the top 10 scores
+
+        leaderboard.innerHTML = "";
+        leaderboardItems.forEach((item) => {
+          const listItem = document.createElement("li");
+          listItem.innerText = `${item.name} - ${item.score}`;
+          listItem.classList.add("leaderboard-item");
+          leaderboard.appendChild(listItem);
+        });
       }
 
-      function backToMain() {
+      function saveToLeaderboard() {
         playerName = document.getElementById("nameInput").value;
         if (gameScore) {
           if (!playerName) {
             alert("Please enter your name.");
             return;
           }
-          if (document.getElementById("game-screen").style.display != "none")
-            updateLeaderboard(playerName, gameScore);
+          updateLeaderboard(playerName, gameScore);
         }
+      }
+
+      function backToMain() {
         document.getElementById("nameInput").innerHTML = "";
         document.getElementById("game-screen").style.display = "none";
         document.getElementById("main-menu").style.display = "flex";
